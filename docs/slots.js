@@ -20,6 +20,43 @@ function paintReel(index, symbol) {
   ghosts[0].textContent = SYMBOLS[(symbol + 5) % 6].face;
   ghosts[1].textContent = SYMBOLS[(symbol + 1) % 6].face;
 }
+async function animateReel(index, target, reduced) {
+  const reel = document.querySelectorAll('.reel')[index];
+  if (reduced) {
+    await new Promise(resolve => setTimeout(resolve, 100 + index * 60));
+    paintReel(index, target);
+    return;
+  }
+  const start = SYMBOLS.findIndex(s => s.face === reel.querySelector('.symbol').textContent);
+  const current = Math.max(0, start);
+  const steps = 18 + index * 6 + (target - current + SYMBOLS.length) % SYMBOLS.length;
+  const cellHeight = 92;
+  const offset = (reel.clientHeight - cellHeight) / 2;
+  const strip = document.createElement('div');
+  strip.className = 'reel-strip';
+  strip.setAttribute('aria-hidden', 'true');
+  // Extra cells above and below keep the window full throughout the roll.
+  for (let step = -2; step <= steps + 2; step++) {
+    const cell = document.createElement('span');
+    cell.className = 'strip-symbol';
+    cell.textContent = SYMBOLS[(current + step + SYMBOLS.length) % SYMBOLS.length].face;
+    strip.append(cell);
+  }
+  reel.classList.add('rolling');
+  reel.append(strip);
+  const animation = strip.animate([
+    { transform: `translateY(${offset - 2 * cellHeight}px)` },
+    { transform: `translateY(${offset - (steps + 2) * cellHeight}px)` },
+  ], { duration: 1400 + index * 400, easing: 'cubic-bezier(.12,.55,.22,1)', fill: 'forwards' });
+  try {
+    await animation.finished;
+  } finally {
+    paintReel(index, target);
+    reel.classList.remove('rolling');
+    strip.remove();
+    animation.cancel();
+  }
+}
 function render() {
   $('#balance').textContent = format(state.balance);
   $('#last-win').textContent = state.history.length ? format(state.history[0].award) : '—';
@@ -84,14 +121,8 @@ $('#spin').addEventListener('click', async () => {
   $('.machine').classList.remove('winner');
   $('#reels').classList.add('spinning');
   $('#reels').setAttribute('aria-busy','true');
-  const reels = [...document.querySelectorAll('.reel')];
-  reels.forEach(r => r.classList.add('unsettled'));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  for (let i = 0; i < 3; i++) {
-    await new Promise(resolve => setTimeout(resolve, reduced ? 50 : i === 0 ? 500 : 280));
-    paintReel(i, result.reels[i]);
-    reels[i].classList.remove('unsettled');
-  }
+  await Promise.all(result.reels.map((target, index) => animateReel(index, target, reduced)));
   $('#reels').classList.remove('spinning');
   $('#reels').setAttribute('aria-busy','false');
   busy = false;
