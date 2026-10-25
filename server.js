@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 const root = fileURLToPath(new URL('./public/', import.meta.url));
-const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
+const types = {'.svg':'image/svg+xml','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 export const server = http.createServer(async (req,res) => {
   if (!['GET','HEAD'].includes(req.method)) { res.writeHead(405); return res.end(); }
   if (req.url === '/health') { res.writeHead(200,{'Content-Type':'application/json'}); return res.end(JSON.stringify({status:'ok'})); }

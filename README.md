@@ -33,3 +33,11 @@ curl --fail http://127.0.0.1:3000/health
 Server tests cover assets, health, missing files, unsupported methods, and path traversal. A browser smoke check was also performed during setup for project persistence, task transitions, media previews, demo orders, booking, and mobile layout.
 
 Run this project from a local or cloud checkout. Publishing its source to GitHub does not deploy it as a public app.
+
+## Beta 1 — Lucky After Hours
+
+Open `/beta1.html` on the running app, or choose **Beta 1 · Slots** in the studio sidebar. A standalone three-reel game with 1,000 free demo credits, bets of 1/5/10/25/50, staggered reel animations, a paytable, five-spin history, and reset confirmation. It is virtual play only: no payments, deposits, cashouts, or prizes.
+
+Three matching symbols pay 4×/6×/8×/12×/20×/40× according to the displayed paytable. An exact pair in any positions pays 1× (break even); otherwise 0. Payouts include the bet. Each of six symbols has equal independent probability, drawn with browser crypto and rejection sampling. The theoretical return is 180/216 = 83.33%, verified exhaustively in the engine tests. No outcome is changed based on the player's balance or history.
+
+Credits, bets, and history are stored separately from studio data in browser localStorage. Settlement is saved before animation to prevent refresh refunds. These are editable local demo credits, not a secure account balance. Reduced-motion preferences are respected. No autoplay is included.
