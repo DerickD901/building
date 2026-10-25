@@ -40,10 +40,14 @@ Open `/beta1.html` on the running app, or choose **Beta 1 · Slots** in the stud
 
 Three matching symbols pay 4×/6×/8×/12×/20×/40× according to the displayed paytable. An exact pair in any positions pays 1× (break even); otherwise 0. Payouts include the bet. Each of six symbols has equal independent probability, drawn with browser crypto and rejection sampling. The theoretical return is 180/216 = 83.33%, verified exhaustively in the engine tests. No outcome is changed based on the player's balance or history.
 
-Credits, bets, and history are stored separately from studio data in browser localStorage. Settlement is saved before animation to prevent refresh refunds. These are editable local demo credits, not a secure account balance. Reduced-motion preferences are respected. No autoplay is included.
+Credits, bets, and history are stored separately from studio data in browser localStorage. Settlement is saved before animation to prevent refresh refunds. These are editable local demo credits, not a secure account balance. Reduced-motion preferences are respected by default. The **Animate reels** switch below the spin controls lets players explicitly turn rolling on or off and saves their preference. No autoplay is included.
 
 ## Play on GitHub Pages
 
 The `docs/` directory is a generated static version, with Beta 1 as its home page. On GitHub, open this repository's **Settings → Pages**, select **Deploy from a branch**, select **main** and **/docs**, and save. After deployment completes, the game is served at `https://derickd901.github.io/building/`. This URL is not live until Pages is enabled and deployment succeeds. No Node server is needed for this static deployment. The studio is available at `studio.html`.
 
 After editing files in `public/`, run `npm run build:pages` and commit the refreshed `docs/` files. Browser saves are specific to the deployed origin and won't copy over from a different preview or local server.
+
+### Reel troubleshooting
+
+Beta 1.0.2 shows its version above the machine. If symbols change without rolling, turn on **Animate reels** beneath SPIN. The initial setting follows the device's reduced-motion preference. The scrolling effect also supports browsers without Web Animations, and a failed visual effect will still settle the result and unlock controls. After an update, Pages must finish publishing; use a refreshed page showing the expected version before diagnosing its behavior.

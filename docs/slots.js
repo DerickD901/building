@@ -3,6 +3,22 @@ const $ = selector => document.querySelector(selector);
 const key = 'building-beta1-v1';
 const fresh = () => ({ balance: 1000, bet: 10, spins: 0, best: 0, history: [] });
 let state = fresh(), busy = false;
+const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
+let animateReels = !motionPreference.matches;
+try {
+  const preference = localStorage.getItem('building-beta1-motion');
+  if (preference !== null) animateReels = preference === 'on';
+} catch { /* Use the device preference when storage is unavailable. */ }
+function renderMotion() {
+  $('#animate-reels').checked = animateReels;
+  $('#animate-reels').disabled = busy;
+  $('#motion-note').textContent = animateReels ? 'Reels roll and stop one at a time.' : 'Motion off. Enable to see the reels spin.';
+}
+$('#animate-reels').addEventListener('change', () => {
+  animateReels = $('#animate-reels').checked;
+  try { localStorage.setItem('building-beta1-motion', animateReels ? 'on' : 'off'); } catch { /* Session-only preference. */ }
+  renderMotion();
+});
 try {
   const saved = JSON.parse(localStorage.getItem(key));
   if (saved && Number.isSafeInteger(saved.balance) && saved.balance >= 0 && saved.balance < 1e12 && BETS.includes(saved.bet) && Number.isSafeInteger(saved.spins) && saved.spins >= 0 && Number.isSafeInteger(saved.best) && saved.best >= 0 && Array.isArray(saved.history) && saved.history.length <= 5 && saved.history.every(h => Number.isSafeInteger(h.bet) && BETS.includes(h.bet) && Number.isSafeInteger(h.award) && h.award >= 0 && Array.isArray(h.reels) && h.reels.length === 3 && h.reels.every(r => Number.isInteger(r) && r >= 0 && r < 6))) state = saved;
@@ -44,17 +60,38 @@ async function animateReel(index, target, reduced) {
   }
   reel.classList.add('rolling');
   reel.append(strip);
-  const animation = strip.animate([
-    { transform: `translateY(${offset - 2 * cellHeight}px)` },
-    { transform: `translateY(${offset - (steps + 2) * cellHeight}px)` },
-  ], { duration: 1400 + index * 400, easing: 'cubic-bezier(.12,.55,.22,1)', fill: 'forwards' });
+  let animation;
+  const from = offset - 2 * cellHeight;
+  const to = offset - (steps + 2) * cellHeight;
+  const duration = 1400 + index * 400;
   try {
-    await animation.finished;
+    if (typeof strip.animate === 'function') {
+      animation = strip.animate([
+        { transform: `translateY(${from}px)` },
+        { transform: `translateY(${to}px)` },
+      ], { duration, easing: 'cubic-bezier(.12,.55,.22,1)', fill: 'forwards' });
+      await animation.finished;
+    } else {
+      // Older browsers can scroll the strip without the Web Animations API.
+      await new Promise(resolve => {
+        const started = performance.now();
+        function frame(now) {
+          const progress = Math.min(1, (now - started) / duration);
+          const eased = 1 - (1 - progress) ** 3;
+          strip.style.transform = `translateY(${from + (to - from) * eased}px)`;
+          if (progress < 1) requestAnimationFrame(frame);
+          else resolve();
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+  } catch {
+    // An interrupted visual effect must not leave a settled game stuck spinning.
   } finally {
     paintReel(index, target);
     reel.classList.remove('rolling');
     strip.remove();
-    animation.cancel();
+    animation?.cancel();
   }
 }
 function render() {
@@ -121,13 +158,17 @@ $('#spin').addEventListener('click', async () => {
   $('.machine').classList.remove('winner');
   $('#reels').classList.add('spinning');
   $('#reels').setAttribute('aria-busy','true');
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  await Promise.all(result.reels.map((target, index) => animateReel(index, target, reduced)));
-  $('#reels').classList.remove('spinning');
-  $('#reels').setAttribute('aria-busy','false');
-  busy = false;
-  render();
-  $('#spin').firstChild.textContent = 'SPIN ';
+  renderMotion();
+  try {
+    await Promise.all(result.reels.map((target, index) => animateReel(index, target, !animateReels)));
+  } finally {
+    $('#reels').classList.remove('spinning');
+    $('#reels').setAttribute('aria-busy', 'false');
+    busy = false;
+    renderMotion();
+    render();
+    $('#spin').firstChild.textContent = 'SPIN ';
+  }
   if (result.multiplier > 1) {
     $('#result').textContent = `Three ${SYMBOLS[result.reels[0]].name.toLowerCase()}! ${result.award} credits paid (+${result.award - bet} net).`;
     $('#result').classList.add('win');
@@ -149,4 +190,5 @@ $('#confirm-reset').addEventListener('click', () => {
 });
 (state.history[0]?.reels || [5,5,5]).forEach((symbol,i) => paintReel(i,symbol));
 render();
+renderMotion();
 if (state.history.length) $('#result').textContent = `Welcome back. ${balanceMessage()}`;
